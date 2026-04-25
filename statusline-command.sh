@@ -10,6 +10,7 @@ cwd=$(echo "$input"        | jq -r '.cwd // empty')
 ctx_size=$(echo "$input"   | jq -r '.context_window.context_window_size // empty')
 remaining=$(echo "$input"  | jq -r '.context_window.remaining_percentage // empty')
 rl_5h=$(echo "$input"     | jq -r '.rate_limits.five_hour.used_percentage  // empty')
+rl_7d=$(echo "$input"     | jq -r '.rate_limits.seven_day.used_percentage   // empty')
 # effortLevel is not in statusline JSON — read from settings.json
 effort=$(jq -r '.effortLevel // empty' ~/.claude/settings.json 2>/dev/null)
 
@@ -57,10 +58,11 @@ if [ -n "$model" ]; then
   seg="${ACC}◆${RST}  \033[37m${model}\033[0m"
   if [ -n "$effort" ]; then
     case "$effort" in
-      high)   sym="●"; effort_label="High"   ;;
-      medium) sym="◉"; effort_label="Medium" ;;
       low)    sym="○"; effort_label="Low"    ;;
-      *)      sym="▪"; effort_label="$effort" ;;
+      medium) sym="◐"; effort_label="Medium" ;;
+      high)   sym="◉"; effort_label="High"   ;;
+      xhigh)  sym="●"; effort_label="XHigh"  ;;
+      *)      sym="◈"; effort_label="Max"    ;;
     esac
     seg="${seg} ${DIM}( ${effort_label} ${sym} )${RST}"
   fi
@@ -101,6 +103,16 @@ if [ -n "$rl_5h" ]; then
     usage_seg="${usage_seg}  ${DIM}·${RST}  "
   fi
   usage_seg="${usage_seg}${col}5h${RST} ${bar_5h} ${col}${p5}%${RST}"
+  has_usage=true
+fi
+if [ -n "$rl_7d" ]; then
+  p7=$(printf '%.0f' "$rl_7d" 2>/dev/null || echo 0)
+  col=$(colour_pct "$p7")
+  bar_7d=$(ctx_bar "$p7")
+  if [ "$has_usage" = true ]; then
+    usage_seg="${usage_seg}  ${DIM}·${RST}  "
+  fi
+  usage_seg="${usage_seg}${col}7d${RST} ${bar_7d} ${col}${p7}%${RST}"
   has_usage=true
 fi
 if [ "$has_usage" = true ]; then
