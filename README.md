@@ -40,6 +40,3 @@ Add to `~/.claude/settings.json`:
 - Bash 4+ (Git Bash on Windows works)
 - A terminal that supports ANSI escape codes and Unicode
 
-## License
-
-MIT
