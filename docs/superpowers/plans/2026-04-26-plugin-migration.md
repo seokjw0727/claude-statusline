@@ -2,7 +2,134 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Convert `claude-statusline` from a manual-install bash script into a Claude Code marketplace plugin (v0.1.0), removing environment dependencies that prevent it from working on other users' machines.
+---
+
+## ADDENDUM (2026-04-26, mid-execution)
+
+Task 0's manifest spec verification revealed that **Claude Code plugins cannot currently distribute a main `statusLine`** — only `agent` and `subagentStatusLine` keys are honored in a plugin's `settings.json` (https://code.claude.com/docs/en/plugins.md). Plugin distribution would still require users to manually edit their personal settings.json to activate the statusline, defeating the central benefit.
+
+**Revised scope (v0.1.0): Portability fixes only — no plugin packaging.**
+
+Task status under the revised scope:
+
+| Task | Status | Notes |
+|---|---|---|
+| 0 | DONE (verification) | Discovered the limitation above |
+| 1 | EXECUTE | Script portability fixes (unchanged) |
+| 2 | EXECUTE | LICENSE + CHANGELOG (CHANGELOG content revised below) |
+| 3 | DROPPED | `plugin.json` not useful when plugin can't ship statusLine |
+| 4 | DROPPED | `marketplace.json` likewise |
+| 5 | EXECUTE WITH MAJOR CHANGES | README rewritten without plugin sections — see "Revised Task 5" below |
+| 6 | DROPPED | No plugin to install |
+| 7 | DROPPED | No plugin → no manual/plugin conflict |
+| 8 | EXECUTE WITH CHANGES | Just `git push origin main`; no remote install verification needed |
+| 9 | EXECUTE WITH CHANGES | v0.1.0 still released, but as a "portability" release — release notes revised below |
+
+**Revised CHANGELOG.md (Task 2 step 2)** — replace the "[0.1.0] — 2026-04-26" entry with:
+```markdown
+## [0.1.0] — 2026-04-26
+
+### Changed
+- Read effort from statusline JSON `.effort.level` instead of `~/.claude/settings.json` — works for all users, reflects mid-session `/effort` changes
+- Missing `jq` now produces a clear in-statusline notice instead of silent empty output
+- README: OS-specific `jq` install commands; tightened install/requirements wording
+
+### Added
+- Standalone `LICENSE` file (MIT, extracted from README)
+- This `CHANGELOG.md`
+
+### Removed
+- Hardcoded winget `jq` PATH from `statusline-command.sh` line 4 (broke on every other machine)
+- Dead `fmt_ctx_size()` helper and its implied `bc` dependency
+```
+
+**Revised Task 5: README content** — replace the README content in Task 5 step 1 with:
+
+````markdown
+# claude-statusline
+
+Minimal Unicode statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+
+```
+◆  Opus 4.7 ( High ◉ )  │  ▶  projects/my-app  │  ■  ctx ████░░░░░░ 40%  ·  5h ██░░░░░░░░ 20%  ·  7d ███████░░░ 70%
+```
+
+## Install
+
+```bash
+cp statusline-command.sh ~/.claude/statusline-command.sh
+chmod +x ~/.claude/statusline-command.sh
+```
+
+Then add to `~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline-command.sh"
+  }
+}
+```
+
+## Segments
+
+| Icon | Segment | Description |
+|------|---------|-------------|
+| `◆` | Model | Active model name (e.g. Opus 4.7) |
+| `◈ ● ◉ ◐ ○` | Effort | Reasoning effort level (Max / XHigh / High / Medium / Low) |
+| `▶` | CWD | Last two path components of working directory |
+| `■` | Context | Context window usage bar with percentage |
+| `■` | 5h Rate | 5-hour rate limit usage bar with percentage |
+| `■` | 7d Rate | 7-day rate limit usage bar with percentage |
+
+`ctx`, `5h`, and `7d` share a single `■` segment, joined internally by a dimmed `·` separator. Top-level segments are joined by a dimmed `│` separator. Usage bars turn **yellow → orange → red** as they increase. Rate limit and effort segments are hidden automatically when the corresponding field is absent from the statusline JSON input.
+
+## Requirements
+
+- **`jq`** — used to parse the statusline JSON input. Install:
+  - Windows: `winget install jqlang.jq`
+  - macOS: `brew install jq`
+  - Linux (Debian/Ubuntu): `sudo apt install jq`
+- Bash 4+ (Git Bash on Windows works)
+- A terminal that supports ANSI escape codes and Unicode
+
+If `jq` is missing, the statusline shows a single red `■ [jq missing — install: https://jqlang.org]` notice.
+
+## Configuration (optional)
+
+The effort segment shows whatever level Claude Code reports for the current session. Change it any time with `/effort low|medium|high|xhigh|max` and the statusline updates immediately. If the active model does not support effort, the segment is automatically hidden.
+
+There is nothing else to configure.
+
+## Plugin distribution (future)
+
+A plugin-distributed version is on hold until the Claude Code plugin system supports a main `statusLine` in plugin-bundled `settings.json` (currently only `subagentStatusLine` is supported). When that lands, this README will be updated with one-command install instructions.
+
+## License
+
+See [LICENSE](LICENSE).
+````
+
+**Revised Task 8 (push only):** drop steps 2–4. Just run:
+```bash
+git -C /c/Users/seokj/.claude/claude-statusline-repo push origin main
+```
+
+**Revised Task 9 (release notes):** replace the `gh release create` notes with:
+```
+First tagged release. Portability fixes — no longer hardcoded to one machine.
+
+- Reads effort from statusline JSON `.effort.level` (works for all users)
+- Clear in-statusline notice when `jq` is missing
+- Removed hardcoded winget `jq` PATH and dead code
+
+See [CHANGELOG.md](https://github.com/seokjw0727/claude-statusline/blob/v0.1.0/CHANGELOG.md) for the full list. Plugin distribution is on hold until Claude Code's plugin system supports main `statusLine` (currently only `subagentStatusLine` is supported).
+```
+
+The original task content below is preserved as a historical record. **Where it conflicts with this addendum, the addendum wins.**
+
+---
 
 **Architecture:** Mono-marketplace inside the existing repo. Add `.claude-plugin/marketplace.json` and `.claude-plugin/plugin.json` manifests. Edit `statusline-command.sh` to remove the hardcoded jq PATH, add a missing-jq error path, and switch the effort source to the standard statusline JSON `.effort.level` field. Rewrite README with plugin install primary, manual install as fallback. Manual smoke test only (no CI). Tag `v0.1.0` and publish a GitHub release.
 

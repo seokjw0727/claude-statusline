@@ -1,8 +1,33 @@
 # Plugin Migration Design
 
 **Date:** 2026-04-26
-**Status:** Approved (brainstorming complete)
+**Status:** Superseded — see ADDENDUM below
 **Scope:** Convert manual-install statusline to a Claude Code marketplace plugin
+
+---
+
+## ADDENDUM (2026-04-26, post-approval)
+
+During execution Task 0 (manifest spec verification), the official Claude Code plugin documentation was confirmed to state:
+
+> "Plugins can include a `settings.json` file at the plugin root to apply default configuration when the plugin is enabled. **Currently, only the `agent` and `subagentStatusLine` keys are supported.**"
+>
+> — https://code.claude.com/docs/en/plugins.md
+
+This means a plugin **cannot distribute a main `statusLine` configuration**. Only `subagentStatusLine` (for subagents, a different feature) is supported. Even after `/plugin install`, users would still have to manually add a `statusLine` block to their personal `~/.claude/settings.json` to actually activate the statusline — defeating the central benefit of plugin distribution.
+
+**New scope (v0.1.0):** drop plugin packaging entirely. Keep the parts of this design that produce immediate value to all users:
+- Script portability fixes (jq detection, `.effort.level` from statusline JSON, dead code removal)
+- LICENSE + CHANGELOG file additions
+- README cleanup (manual install only, with OS-specific jq install commands)
+
+**Dropped from scope:** `.claude-plugin/marketplace.json`, `.claude-plugin/plugin.json`, the "Migrating from manual install" section, plugin install commands in README, and all plugin-install smoke tests.
+
+**Plugin distribution is deferred** until the Claude Code plugin system supports `statusLine` in a plugin's bundled `settings.json`. When that lands, a follow-up release will add the manifest files; the script and other changes from this release will not need to be redone.
+
+The remainder of this document reflects the **original** plugin-packaging plan and is preserved as a record. Sections that no longer apply (Manifest files, Plugin identifiers, Migrating from manual install, plugin smoke tests, plugin parts of release process) are obsolete — see the updated plan for what was actually executed.
+
+---
 
 ## Goal
 
