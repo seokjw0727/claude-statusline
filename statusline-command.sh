@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Claude Code status line — minimal Unicode style
 
-export PATH="/c/Users/seokj/AppData/Local/Microsoft/WinGet/Packages/jqlang.jq_Microsoft.Winget.Source_8wekyb3d8bbwe:$PATH"
+if ! command -v jq >/dev/null 2>&1; then
+  printf '\033[31m■\033[0m \033[37m[jq missing — install: https://jqlang.org]\033[0m\n'
+  exit 0
+fi
 
 input=$(cat)
 
@@ -11,20 +14,7 @@ ctx_size=$(echo "$input"   | jq -r '.context_window.context_window_size // empty
 remaining=$(echo "$input"  | jq -r '.context_window.remaining_percentage // empty')
 rl_5h=$(echo "$input"     | jq -r '.rate_limits.five_hour.used_percentage  // empty')
 rl_7d=$(echo "$input"     | jq -r '.rate_limits.seven_day.used_percentage   // empty')
-# effortLevel is not in statusline JSON — read from settings.json
-effort=$(jq -r '.effortLevel // empty' ~/.claude/settings.json 2>/dev/null)
-
-# Format context window size as human-readable label (e.g. 200000 → "200K", 1000000 → "1M")
-fmt_ctx_size() {
-  local n="$1"
-  if [ -z "$n" ] || [ "$n" = "null" ]; then echo ""; return; fi
-  local int_n
-  int_n=$(printf '%.0f' "$n" 2>/dev/null || echo 0)
-  if   (( int_n >= 1000000 )); then printf '%sM' "$(echo "scale=0; $int_n / 1000000" | bc)"
-  elif (( int_n >= 1000 ));    then printf '%sK' "$(echo "scale=0; $int_n / 1000"    | bc)"
-  else echo "$int_n"
-  fi
-}
+effort=$(echo "$input" | jq -r '.effort.level // empty')
 
 # ── context bar helper (10-char wide) ──────────────────────────
 # Shows used context as filled blocks, e.g. ██░░░░░░░░
