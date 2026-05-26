@@ -3,8 +3,11 @@
 Minimal Unicode statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
 ```
-◆  Opus 4.7 ( High ◉ )  │  ▶  projects/my-app  │  ■  ctx ████░░░░░░ 40%  ·  5h ██░░░░░░░░ 20%  ·  7d ███████░░░ 70%
+◆  Opus 4.7 ( High ◉ )  │  ▶  projects/my-app  │  ■  ctx ████░░░░░░ 40%
+Claude  5h ██░░░░░░░░ 20%  ·  7d ███████░░░ 70%  │  Codex  5h █░░░░░░░░░ 12%  ·  7d ████░░░░░░ 38%
 ```
+
+A single-line variant is still trivial to make — the second line only appears when rate-limit data is present.
 
 ## Install
 
@@ -21,14 +24,20 @@ Minimal Unicode statusline for [Claude Code](https://docs.anthropic.com/en/docs/
 
 Verify with `jq --version`.
 
+> **Codex usage (optional):** the second-line Codex segment additionally needs `python` on PATH and at least one local [Codex CLI](https://github.com/openai/codex) session under `~/.codex/sessions`. Without either, the Codex segment is silently hidden — everything else still renders.
+
 ### Step 2 — Download the script
 
 **Option A — one-liner (recommended):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/seokjw0727/claude-statusline/v0.1.0/statusline-command.sh \
+curl -fsSL https://raw.githubusercontent.com/seokjw0727/claude-statusline/v0.2.0/statusline-command.sh \
   -o ~/.claude/statusline-command.sh
 chmod +x ~/.claude/statusline-command.sh
+
+# Optional — Codex 5h/7d usage helper
+curl -fsSL https://raw.githubusercontent.com/seokjw0727/claude-statusline/v0.2.0/codex-limits.py \
+  -o ~/.claude/codex-limits.py
 ```
 
 **Option B — `git clone`:**
@@ -36,6 +45,7 @@ chmod +x ~/.claude/statusline-command.sh
 ```bash
 git clone https://github.com/seokjw0727/claude-statusline.git
 cp claude-statusline/statusline-command.sh ~/.claude/statusline-command.sh
+cp claude-statusline/codex-limits.py       ~/.claude/codex-limits.py   # optional, for Codex usage
 chmod +x ~/.claude/statusline-command.sh
 ```
 
@@ -59,7 +69,8 @@ Open `~/.claude/settings.json` and add the `statusLine` key (merge into the exis
 Restart your Claude Code session (or open a new one). The statusline should appear at the bottom of the window:
 
 ```
-◆  Opus 4.7 ( High ◉ )  │  ▶  projects/my-app  │  ■  ctx ████░░░░░░ 40%  ·  5h ██░░░░░░░░ 20%  ·  7d ███████░░░ 70%
+◆  Opus 4.7 ( High ◉ )  │  ▶  projects/my-app  │  ■  ctx ████░░░░░░ 40%
+Claude  5h ██░░░░░░░░ 20%  ·  7d ███████░░░ 70%  │  Codex  5h █░░░░░░░░░ 12%  ·  7d ████░░░░░░ 38%
 ```
 
 ## Updating
@@ -67,7 +78,7 @@ Restart your Claude Code session (or open a new one). The statusline should appe
 Re-run the Step 2 one-liner with the desired tag (e.g. `v0.2.0`) to overwrite the existing script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/seokjw0727/claude-statusline/v0.1.0/statusline-command.sh \
+curl -fsSL https://raw.githubusercontent.com/seokjw0727/claude-statusline/v0.2.0/statusline-command.sh \
   -o ~/.claude/statusline-command.sh
 ```
 
@@ -75,16 +86,25 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed between versions.
 
 ## Segments
 
+The statusline renders on two lines.
+
+**Line 1 — session context:**
+
 | Icon | Segment | Description |
 |------|---------|-------------|
 | `◆` | Model | Active model name (e.g. Opus 4.7) |
 | `◈ ● ◉ ◐ ○` | Effort | Reasoning effort level (Max / XHigh / High / Medium / Low) |
 | `▶` | CWD | Last two path components of the working directory |
 | `■` | Context | Context window usage bar with percentage |
-| `■` | 5h Rate | 5-hour rate limit usage bar with percentage |
-| `■` | 7d Rate | 7-day rate limit usage bar with percentage |
 
-`ctx`, `5h`, and `7d` share a single `■` segment, joined internally by a dimmed `·` separator. Top-level segments are joined by a dimmed `│` separator. Usage bars turn **yellow → orange → red** as they increase. Rate limit and effort segments are hidden automatically when the corresponding field is absent from the statusline JSON input.
+**Line 2 — rate limits:**
+
+| Group | Segment | Description |
+|-------|---------|-------------|
+| `Claude` | 5h / 7d | Claude's own 5-hour and 7-day rate-limit usage bars (from the statusline JSON) |
+| `Codex` | 5h / 7d | Codex 5-hour and 7-day usage bars, parsed from the latest `~/.codex` session (requires `python`) |
+
+Top-level segments are joined by a dimmed `│` separator; the two limits inside a group are joined by a dimmed `·`. All usage bars are 10 characters wide and turn **yellow → orange → red** as they increase. Each segment is hidden automatically when its data is absent — so without `python` or a Codex session, line 2 shows only **Claude**, and if no rate-limit data is present at all, line 2 is omitted entirely.
 
 ## Configuration (optional)
 
@@ -99,6 +119,8 @@ There is nothing else to configure.
 | Red `■ [jq missing — install: https://jqlang.org]` is the only thing rendered | `jq` is not on PATH. Re-run Step 1 and restart your terminal so the new PATH is picked up. |
 | Statusline is empty or shows garbled characters | Terminal does not support ANSI escape codes or Unicode. Switch to Windows Terminal, iTerm2, WezTerm, Alacritty, or another modern terminal. |
 | Effort segment (the `( … )` part) does not appear | Expected when the active model does not support effort. Run `/effort high` to set it explicitly. |
+| Codex segment never appears | Requires `python` on PATH and at least one `~/.codex/sessions/rollout-*.jsonl` from the Codex CLI. Without either, the segment is silently hidden — Claude limits still render. |
+| Second line wraps on a narrow terminal | All four rate-limit bars plus separators are wide. Widen the terminal, or shrink the bars by lowering the width passed to `ctx_bar` inside `rl_seg`. |
 | Statusline does not appear at all | Confirm `~/.claude/settings.json` uses `statusLine` (camelCase) with the object form `{ "type": "command", "command": "..." }`. The older lowercase `statusline` key with a string value is no longer the standard. |
 | `bash: jq: command not found` only inside Claude Code | Claude Code launched the script with a PATH that does not include `jq`. Easiest fix: install `jq` via the OS package manager from Step 1, then restart Claude Code so it inherits the updated PATH. |
 
